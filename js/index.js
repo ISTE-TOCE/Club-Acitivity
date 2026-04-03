@@ -175,6 +175,63 @@ function revealOnScroll() {
 window.addEventListener('scroll', revealOnScroll);
 revealOnScroll();
 
+// Lightweight updates signup (step 1 CTA funnel)
+document.addEventListener('DOMContentLoaded', function () {
+    const updatesForm = document.getElementById('updatesForm');
+    const updatesEmail = document.getElementById('updatesEmail');
+    const updatesSubmit = document.getElementById('updatesSubmit');
+    const updatesStatus = document.getElementById('updatesStatus');
+
+    if (!updatesForm || !updatesEmail || !updatesStatus) {
+        return;
+    }
+
+    updatesForm.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const email = updatesEmail.value.trim().toLowerCase();
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!emailPattern.test(email)) {
+            updatesStatus.className = 'updates-status error';
+            updatesStatus.textContent = 'Enter a valid email address.';
+            updatesEmail.focus();
+            return;
+        }
+
+        if (updatesSubmit) {
+            updatesSubmit.disabled = true;
+            updatesSubmit.textContent = 'Saving...';
+        }
+
+        updatesStatus.className = 'updates-status';
+        updatesStatus.textContent = 'Saving your update request...';
+
+        try {
+            if (db) {
+                await db.collection('event_updates').add({
+                    email: email,
+                    source: 'landing-page',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+
+            updatesStatus.className = 'updates-status success';
+            updatesStatus.textContent = 'You are in. We will email you upcoming event updates.';
+            updatesForm.reset();
+        } catch (error) {
+            secureLog('[Updates] Failed to save update request:', error);
+            updatesStatus.className = 'updates-status error';
+            updatesStatus.textContent = 'Could not save right now. Please try again shortly.';
+        } finally {
+            if (updatesSubmit) {
+                updatesSubmit.disabled = false;
+                updatesSubmit.textContent = 'Notify Me';
+            }
+        }
+    });
+});
+
 // Modal functions
 function openModal() {
     document.getElementById('formModal').classList.add('active');
@@ -1428,19 +1485,23 @@ function renderFeaturedEvent(event) {
         detailsEl.innerHTML = `
             <div class="activity-detail">
                 <div class="activity-detail-icon">📅</div>
-                <span>${escapeHtml(dateDisplay)}</span>
+                <span class="activity-detail-label">Date:</span>
+                <span class="activity-detail-value">${escapeHtml(dateDisplay)}</span>
             </div>
             <div class="activity-detail">
                 <div class="activity-detail-icon">🕐</div>
-                <span>${escapeHtml(event.eventTime || 'Time TBA')}</span>
+                <span class="activity-detail-label">Time:</span>
+                <span class="activity-detail-value">${escapeHtml(event.eventTime || 'Time TBA')}</span>
             </div>
             <div class="activity-detail">
                 <div class="activity-detail-icon">📍</div>
-                <span>${escapeHtml(event.venue || 'Venue TBA')}</span>
+                <span class="activity-detail-label">Venue:</span>
+                <span class="activity-detail-value">${escapeHtml(event.venue || 'Venue TBA')}</span>
             </div>
             <div class="activity-detail">
                 <div class="activity-detail-icon">👥</div>
-                <span>Team Size: ${escapeHtml(teamSizeText)}</span>
+                <span class="activity-detail-label">Team Size:</span>
+                <span class="activity-detail-value">${escapeHtml(teamSizeText)}</span>
             </div>
         `;
     }
